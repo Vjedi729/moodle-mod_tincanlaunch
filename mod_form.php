@@ -210,6 +210,53 @@ class mod_tincanlaunch_mod_form extends moodleform_mod {
         $mform->disabledIf('tincanverbid', 'completionverbenabled', 'notchecked');
         $mform->setDefault('tincanverbid', 'http://adlnet.gov/expapi/verbs/completed');
 
+        // Add grade type setting.
+        $includeMethodOption = true;
+        $includeTypeOption = true;
+        $includeAnyGradeOption = $includeMethodOption || $includeTypeOption;
+
+        // TODO: Add get_string calls to get option name strings (as in "Add LRS Authentication." above).
+        if ($includeAnyGradeOption) {
+            $gradegroup = array(); // Create group.
+        }
+
+        if ($includeTypeOption){
+            // Create first select-type form element.
+            $gradetypeoptions = array(
+                0 => "None",
+                1 => "Pass/Fail",
+                2 => "Scored",
+                3 => "Percentage"
+            );
+            $gradegroup[] =& $mform->createElement('select', 'tincanlaunchlrsGradeOption', get_string('gradetype', 'tincanlaunch'), $gradetypeoptions);
+        }
+
+        // Create another element (also select-type).
+        if ($includeMethodOption) {
+            $gradecombinationmethodoptions = array(
+                0 => "Best Score",
+                1 => "Average Score",
+                2 => "Most Recent Score",
+            );
+            $gradegroup[] =& $mform->createElement('select', 'tincanlaunchGradeComboMethod', get_string('gradecombinationmethod', 'tincanlaunch'), $gradecombinationmethodoptions);
+        }
+
+        // Add group to the main form.
+        if ($includeAnyGradeOption) {
+            $mform->addGroup($gradegroup, 'gradegroup', get_string('gradegroup', 'tincanlaunch'), array(' '), false);
+            $mform->addHelpButton('gradegroup', 'gradegroup', 'tincanlaunch');
+        }
+
+        // Set defaults and disable conditions
+        if ($includeTypeOption) {
+            // $mform->disabledIf('tincanlaunchlrsGradeOption', 'overridedefaults');
+            $mform->setDefault('tincanlaunchlrsGradeOption', 2);
+        }
+        if ($includeMethodOption) {
+            // $mform->disabledIf('tincanlaunchGradeComboMethod', 'overridedefaults');
+            $mform->setDefault('tincanlaunchGradeComboMethod', 0);
+        }
+
         // Add Completion Expiry Date setting.
         $completiongroup = array();
         $completiongroup[] =& $mform->createElement(
@@ -240,7 +287,11 @@ class mod_tincanlaunch_mod_form extends moodleform_mod {
         $mform->disabledIf('tincanexpiry', 'completionexpiryenabled', 'notchecked');
         $mform->setDefault('tincanexpiry', '365');
 
-        return array('completionverbgroup', 'completionexpirygroup');
+        if ($includeAnyGradeOption){
+            return array('completionverbgroup', 'gradegroup', 'completionexpirygroup');
+        } else {
+            return array('completionverbgroup', 'completionexpirygroup');
+        }
     }
 
     public function completion_rule_enabled($data) {

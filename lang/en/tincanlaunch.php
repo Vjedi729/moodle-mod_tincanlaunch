@@ -111,6 +111,12 @@ $string['completionverb'] = 'Verb';
 $string['completionverbgroup'] = 'Track completion by verb';
 $string['completionverbgroup_help'] = 'Moodle will look for statements where the actor is the current user, the object is the specified activity id and the verb is the one set here. If it finds a matching statement, the activity will be marked complete.';
 
+// Grading type settings.
+$string['gradetype'] = 'Grade type';
+$string['gradecombinationmethod'] = 'Grade combination method';
+$string['gradegroup'] = 'Grade settings';
+$string['gradegroup_help'] = 'Moodle will apply the grade of the type selected from the results section of the completion tracking statement(s).';
+
 // Expiry completion settings.
 $string['completionexpiry'] = 'Expiry';
 $string['completionexpirygroup'] = 'Completion Expires After (days)';
@@ -139,6 +145,7 @@ $string['tincanlaunch:addinstance'] = 'Add a new xAPI activity to a course';
 
 $string['expirecredentials'] = 'Expire credentials';
 $string['checkcompletion'] = 'Check Completion';
+$string['checkgrades'] = 'Check Grades';
 
 // User profile fields.
 $string['profilefields'] = 'User profile fields to sync to Agent Profile';
