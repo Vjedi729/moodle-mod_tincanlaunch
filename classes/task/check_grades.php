@@ -25,9 +25,9 @@ defined('MOODLE_INTERNAL') || die();
 require_once(dirname(dirname(dirname(__FILE__))).'/lib.php');
 require_once($CFG->dirroot.'/lib/completionlib.php');
 
-class check_completion extends \core\task\scheduled_task {
+class check_grades extends \core\task\scheduled_task {
     public function get_name() {
-        return get_string('checkcompletion', 'tincanlaunch');
+        return get_string('checkgrades', 'tincanlaunch');
     }
 
     public function execute() {
@@ -52,39 +52,11 @@ class check_completion extends \core\task\scheduled_task {
             $course = $courses[$cm->course];
             $completion = new \completion_info($course);
 
-            // Determine if the activity has a completion expiration set.
-            if ($tincanlaunch->tincanexpiry > 0) { // Yes, completion expiry set.
-                $possibleresult = COMPLETION_UNKNOWN;
-            } else {
-                $possibleresult = COMPLETION_COMPLETE;
-            }
-
             if ($completion->is_enabled($cm) && $tincanlaunch->tincanverbid) {
+                echo ('Checking grade for user id '.$enrolment->userid.'. ');
+
                 foreach ($course->enrolments as $enrolment) {
-                    echo ('Checking completion for user id '.$enrolment->userid.'. ');
-
-                    // Query the Moodle DB to determine current completion state.
-                    $oldstate = $completion->get_data($cm, false, $enrolment->userid)->completionstate;
-                    echo ('Old completion state was '.$oldstate.'. ');
-
-                    // Execute plugins 'tincanlaunch_get_completion_state' to determine if complete.
-                    $completion->update_state($cm, $possibleresult, $enrolment->userid);
-
-                    // Query the Moodle DB again to determine a change in completion state.
-                    $newstate = $completion->get_data($cm, false, $enrolment->userid)->completionstate;
-                    echo ('New completion state is '.$newstate.'. '.PHP_EOL);
-
-                    if ($oldstate !== $newstate) {
-                        // Trigger Activity completed event.
-                        $event = \mod_tincanlaunch\event\activity_completed::create(array(
-                            'objectid' => $tincanlaunch->id,
-                            'context' => \context_module::instance($cm->id),
-                            'userid' => $enrolment->userid
-                        ));
-                        $event->add_record_snapshot('course_modules', $cm);
-                        $event->add_record_snapshot('tincanlaunch', $tincanlaunch);
-                        $event->trigger();
-                    }
+                    tincanlaunch_update_grades($tincanlaunch, $enrolment->userid, false);
                 }
             }
         }

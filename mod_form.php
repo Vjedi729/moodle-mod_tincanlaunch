@@ -220,7 +220,7 @@ class mod_tincanlaunch_mod_form extends moodleform_mod {
             $gradegroup = array(); // Create group.
         }
 
-        if ($includeTypeOption){
+        if ($includeTypeOption) {
             // Create first select-type form element.
             $gradetypeoptions = array(
                 0 => "None",
@@ -250,11 +250,11 @@ class mod_tincanlaunch_mod_form extends moodleform_mod {
         // Set defaults and disable conditions
         if ($includeTypeOption) {
             // $mform->disabledIf('tincanlaunchlrsGradeOption', 'overridedefaults');
-            $mform->setDefault('tincanlaunchlrsGradeOption', 2);
+            $mform->setDefault('tincanlaunchlrsGradeOption', 3);
         }
         if ($includeMethodOption) {
             // $mform->disabledIf('tincanlaunchGradeComboMethod', 'overridedefaults');
-            $mform->setDefault('tincanlaunchGradeComboMethod', 0);
+            $mform->setDefault('tincanlaunchGradeComboMethod', 2);
         }
 
         // Add Completion Expiry Date setting.

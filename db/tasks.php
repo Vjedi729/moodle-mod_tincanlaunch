@@ -29,5 +29,11 @@ $tasks = array(
         'blocking' => 0,
         'minute' => '01',
         'hour' => '23'
+    ),
+    array(
+        'classname' => 'mod_tincanlaunch\task\check_grades',
+        'blocking' => 0,
+        'minute' => '01',
+        'hour' => '23'
     )
 );
