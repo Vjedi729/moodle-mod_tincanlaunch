@@ -136,16 +136,16 @@ foreach ($agentprofiles as $key => $value) {
 }
 
 // Send launched statement.
-$savelaunchedstatement = tincan_launched_statement($registrationid);
+// $savelaunchedstatement = tincan_launched_statement($registrationid);
 
-$lrsrespond = $savelaunchedstatement->httpResponse['status'];
-if ($lrsrespond != 204) {
-    // Failed to connect to LRS.
-    echo $OUTPUT->notification(get_string('tincanlaunch_notavailable', 'tincanlaunch'), 'error');
-    debugging("<p>Error attempting to send 'launched' statement.</p><pre>" .
-        var_dump($savelaunchedstatement) . "</pre>", DEBUG_DEVELOPER);
-    die();
-}
+// $lrsrespond = $savelaunchedstatement->httpResponse['status'];
+// if ($lrsrespond != 204) {
+//     // Failed to connect to LRS.
+//     echo $OUTPUT->notification(get_string('tincanlaunch_notavailable', 'tincanlaunch'), 'error');
+//     debugging("<p>Error attempting to send 'launched' statement.</p><pre>" .
+//         var_dump($savelaunchedstatement) . "</pre>", DEBUG_DEVELOPER);
+//     die();
+// }
 
 $completion = new completion_info($course);
 $completion->set_module_viewed($cm);
