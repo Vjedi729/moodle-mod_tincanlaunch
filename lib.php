@@ -278,13 +278,17 @@ function tincanlaunch_get_file_areas() {
  *
  * @param file_browser $browser
  * @param array $areas
+ * @param stdClass $course course object
+ * @param stdClass $cm course module
  * @param stdClass $context
  * @param string $filearea
+ * @param int $itemid item ID
  * @param string $filepath
  * @param string $filename
+ * 
  * @return file_info instance or null if not found
  */
-function tincanlaunch_get_file_info($browser, $areas, $context, $filearea, $filepath, $filename) {
+function tincanlaunch_get_file_info($browser, $areas, $course, $cm, $context, $filearea, $itemid, $filepath, $filename) {
     global $CFG;
 
     if (!has_capability('moodle/course:managefiles', $context)) {
