@@ -21,16 +21,16 @@
  * This code fragment is called by moodle_needs_upgrading() and
  * /admin/index.php
  *
- * @package mod_tincanlaunch
- * @copyright  2013 Andrew Downes
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   mod_tincanlaunch
+ * @copyright 2021 Vishal Patel (Vertex Solutions)
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2022021603;      // The current module version (Date: YYYYMMDDXX).
+$plugin->version   = 2022092901;      // The current module version (Date: YYYYMMDDXX).
 $plugin->requires  = 2018051700;      // Requires Moodle 3.0 version.
 $plugin->cron      = 0;               // Period for cron to check this module (secs).
 $plugin->component = 'mod_tincanlaunch'; // To check on upgrade, that module sits in correct place.
 $plugin->maturity = MATURITY_STABLE;
-$plugin->release = '1.4A (Build: 2022021501)';
+$plugin->release = '1.4B (Build: 2022092901)';

@@ -1,18 +1,4 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
-//
-// Moodle is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Moodle is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * Library of interface functions and constants for module tincanlaunch
@@ -23,9 +9,9 @@
  * logic, should go to locallib.php. This will help to save some memory when
  * Moodle is performing actions across all modules.
  *
- * @package mod_tincanlaunch
- * @copyright  2013 Andrew Downes
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   mod_tincanlaunch
+ * @copyright 2013 Andrew Downes
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 use TinCan\Score;
@@ -34,10 +20,10 @@ use TinCan\Statement;
 defined('MOODLE_INTERNAL') || die();
 
 // TinCanPHP - required for interacting with the LRS in tincanlaunch_get_statements.
-require_once("$CFG->dirroot/mod/tincanlaunch/TinCanPHP/autoload.php");
+require_once "$CFG->dirroot/mod/tincanlaunch/TinCanPHP/autoload.php";
 
 // SCORM library from the SCORM module. Required for its xml2Array class by tincanlaunch_process_new_package.
-require_once("$CFG->dirroot/mod/scorm/datamodels/scormlib.php");
+require_once "$CFG->dirroot/mod/scorm/datamodels/scormlib.php";
 
 global $tincanlaunchsettings;
 $tincanlaunchsettings = null;
@@ -47,24 +33,27 @@ $tincanlaunchsettings = null;
 /**
  * Returns the information on whether the module supports a feature
  *
- * @see plugin_supports() in lib/moodlelib.php
  * @param string $feature FEATURE_xx constant for requested feature
+ * 
+ * @see plugin_supports() in lib/moodlelib.php
+ * 
  * @return mixed true if the feature is supported, null if unknown
  */
-function tincanlaunch_supports($feature) {
+function tincanlaunch_supports($feature)
+{
     switch($feature) {
-        case FEATURE_MOD_INTRO:
-            return true;
-        case FEATURE_COMPLETION_TRACKS_VIEWS:
-            return true;
-        case FEATURE_COMPLETION_HAS_RULES:
-            return true;
-        case FEATURE_BACKUP_MOODLE2:
-            return true;
-        case FEATURE_GRADE_HAS_GRADE:
-            return true;
-        default:
-            return null;
+    case FEATURE_MOD_INTRO:
+        return true;
+    case FEATURE_COMPLETION_TRACKS_VIEWS:
+        return true;
+    case FEATURE_COMPLETION_HAS_RULES:
+        return true;
+    case FEATURE_BACKUP_MOODLE2:
+        return true;
+    case FEATURE_GRADE_HAS_GRADE:
+        return true;
+    default:
+        return null;
     }
 }
 
@@ -75,11 +64,15 @@ function tincanlaunch_supports($feature) {
  * (defined by the form in mod_form.php) this function
  * will create a new instance and return the id number
  * of the new instance.
+ * 
  * @param object $tincanlaunch An object from the form in mod_form.php
+ * 
  * @global moodle_database $DB
+ * 
  * @return int The id of the newly inserted tincanlaunch record
  */
-function tincanlaunch_add_instance(stdClass $tincanlaunch) {
+function tincanlaunch_add_instance(stdClass $tincanlaunch) 
+{
     global $DB;
 
     $tincanlaunch->timecreated = time();
@@ -320,17 +313,22 @@ function tincanlaunch_get_file_info($browser, $areas, $context, $filearea, $file
 /**
  * Serves Tin Can content, introduction images and packages. Implements needed access control ;-)
  *
+ * 
+ * @param stdClass $course        course object
+ * @param stdClass $cm            course module object
+ * @param stdClass $context       context object
+ * @param string   $filearea      file area
+ * @param array    $args          extra arguments
+ * @param bool     $forcedownload whether or not force download
+ * @param array    $options       additional options affecting the file serving
+ * 
  * @package  mod_tincanlaunch
  * @category files
- * @param stdClass $course course object
- * @param stdClass $cm course module object
- * @param stdClass $context context object
- * @param string $filearea file area
- * @param array $args extra arguments
- * @param array $options additional options affecting the file serving
- * @return bool false if file not found, does not return if found - just send the file
+
+ * @return bool false if file not found, if found, sends file and returns no value
  */
-function tincanlaunch_pluginfile($course, $cm, $context, $filearea, $args, array $options = array()) {
+function tincanlaunch_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = array())
+{
 
     if ($context->contextlevel != CONTEXT_MODULE) {
         return false;
@@ -690,7 +688,8 @@ function tincanlaunch_getactor($instance, $user = false) {
 
 
 // GRADEBOOK API functions
-function tincanlaunch_grade_settings_helper($modinstance, $tincanlaunchsettings=null) {
+function tincanlaunch_grade_settings_helper($modinstance, $tincanlaunchsettings=null)
+{
     if ($tincanlaunchsettings == null) {
         $tincanlaunchsettings = new stdClass();
     }

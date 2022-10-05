@@ -121,7 +121,7 @@ function tincan_launched_statement($registrationid) {
  *
  * @package  mod_tincanlaunch
  * @category tincan
- * @param string/UUID $registrationid The Tin Can Registration UUID associated with the launch.
+
  * @return string launch link including querystring.
  */
 function tincanlaunch_get_launch_url($registrationuuid) {
@@ -139,32 +139,33 @@ function tincanlaunch_get_launch_url($registrationuuid) {
 
     switch ($tincanlaunchsettings['tincanlaunchlrsauthentication']) {
 
-            // Learning Locker 1.
-        case "0":
-            $creds = tincanlaunch_get_creds_learninglocker(
-                $tincanlaunchsettings['tincanlaunchlrslogin'],
-                $tincanlaunchsettings['tincanlaunchlrspass'],
-                $url,
-                $expiry,
-                $registrationuuid
-            );
-            $basicauth = base64_encode($creds["contents"]["key"] . ":" . $creds["contents"]["secret"]);
-            break;
+    // Learning Locker 1.
+    case "0":
+        $creds = tincanlaunch_get_creds_learninglocker(
+            $tincanlaunchsettings['tincanlaunchlrslogin'],
+            $tincanlaunchsettings['tincanlaunchlrspass'],
+            $url,
+            $expiry,
+            $registrationuuid
+        );
+        $basicauth = base64_encode($creds["contents"]["key"] . ":" . $creds["contents"]["secret"]);
+        break;
 
-            // Watershed.
-        case "2":
-            $creds = tincanlaunch_get_creds_watershed(
-                $basiclogin,
-                $basicpass,
-                $url,
-                $xapiduration * 60
-            );
-            $basicauth = base64_encode($creds["key"] . ":" . $creds["secret"]);
-            break;
+    // Watershed.
+    case "2":
+        $creds = tincanlaunch_get_creds_watershed(
+            $basiclogin,
+            $basicpass,
+            $url,
+            $xapiduration * 60
+        );
+        $basicauth = base64_encode($creds["key"] . ":" . $creds["secret"]);
+        break;
 
-        default:
-            $basicauth = base64_encode($basiclogin . ":" . $basicpass);
-            break;
+    // Basic Auth
+    default:
+        $basicauth = base64_encode($basiclogin . ":" . $basicpass);
+        break;
     }
 
     // Build the URL to be returned.
@@ -178,6 +179,81 @@ function tincanlaunch_get_launch_url($registrationuuid) {
                 )
             ),
             "registration" => $registrationuuid,
+            "activity_id" => $tincanlaunch->tincanactivityid
+        ),
+        '',
+        '&',
+        PHP_QUERY_RFC3986
+    );
+
+    return $rtnstring;
+}
+
+/**
+ * Builds a Tin Can link for the current module which indicates the current 
+ *
+ * @package  mod_tincanlaunch
+ * @category tincan
+ * 
+ * @return string launch link including querystring.
+ */
+function tincanlaunch_get_grade_url() 
+{
+    global $tincanlaunch;
+    $tincanlaunchsettings = tincanlaunch_settings($tincanlaunch->id);
+    $expiry = new DateTime('NOW');
+    $xapiduration = $tincanlaunchsettings['tincanlaunchlrsduration'];
+    $expiry->add(new DateInterval('PT' . $xapiduration . 'M'));
+
+    $url = trim($tincanlaunchsettings['tincanlaunchlrsendpoint']);
+
+    // Call the function to get the credentials from the LRS.
+    $basiclogin = trim($tincanlaunchsettings['tincanlaunchlrslogin']);
+    $basicpass = trim($tincanlaunchsettings['tincanlaunchlrspass']);
+
+    switch ($tincanlaunchsettings['tincanlaunchlrsauthentication']) {
+
+    // Learning Locker 1. 
+    case "0":
+        debugging("Error grade URL doesn't work with Learning Locker 1 credentials.", DEBUG_DEVELOPER);
+        die();
+        // $creds = tincanlaunch_get_creds_learninglocker(
+        //     $tincanlaunchsettings['tincanlaunchlrslogin'],
+        //     $tincanlaunchsettings['tincanlaunchlrspass'],
+        //     $url,
+        //     $expiry,
+        //     $registrationuuid
+        // );
+        // $basicauth = base64_encode($creds["contents"]["key"] . ":" . $creds["contents"]["secret"]);
+        // break;
+
+    // Watershed.
+    case "2":
+        $creds = tincanlaunch_get_creds_watershed(
+            $basiclogin,
+            $basicpass,
+            $url,
+            $xapiduration * 60
+        );
+        $basicauth = base64_encode($creds["key"] . ":" . $creds["secret"]);
+        break;
+
+    // Basic Auth
+    default:
+        $basicauth = base64_encode($basiclogin . ":" . $basicpass);
+        break;
+    }
+
+    // Build the URL to be returned.
+    $rtnstring = str_replace('index.html', 'grade-report.html', $tincanlaunch->tincanlaunchurl) . "?" . http_build_query(
+        array(
+            "endpoint" => $url,
+            "auth" => "Basic " . $basicauth,
+            "actor" => tincanlaunch_myjson_encode(
+                tincanlaunch_getactor($tincanlaunch->id)->asVersion(
+                    $tincanlaunchsettings['tincanlaunchlrsversion']
+                )
+            ),
             "activity_id" => $tincanlaunch->tincanactivityid
         ),
         '',

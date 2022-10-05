@@ -1,36 +1,37 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
-//
-// Moodle is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Moodle is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * This launches the experience with the requested registration.
  *
- * @package mod_tincanlaunch
- * @copyright  2013 Andrew Downes
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   mod_tincanlaunch
+ * @copyright 2013 Andrew Downes
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-require_once(dirname(dirname(dirname(__FILE__))) . '/config.php');
-require_once('header.php');
+require_once dirname(dirname(dirname(__FILE__))) . '/config.php';
+require_once 'header.php';
 require_login();
 
+/**
+ * Internal helper for printing debug statements
+ *
+ * @param string $errDesc A short description of the error
+ * @param any    $var     A variable which is relevant to the error
+ * 
+ * @return void
+ */
+function myDevDebug($errDesc, $var)
+{
+    debugging('<p>'.$errDesc."</p><pre>".var_dump($var)."</pre>", DEBUG_DEVELOPER);
+}
+
 // Trigger Activity launched event.
-$event = \mod_tincanlaunch\event\activity_launched::create(array(
-    'objectid' => $tincanlaunch->id,
-    'context' => $context,
-));
+$event = \mod_tincanlaunch\event\activity_launched::create(
+    array(
+        'objectid' => $tincanlaunch->id,
+        'context' => $context,
+    )
+);
 $event->add_record_snapshot('course_modules', $cm);
 $event->add_record_snapshot('tincanlaunch', $tincanlaunch);
 $event->trigger();
@@ -53,8 +54,11 @@ $lrsrespond = $getregistrationdatafromlrsstate->httpResponse['status'];
 // Failed to connect to LRS.
 if ($lrsrespond != 200 && $lrsrespond != 404) {
     echo $OUTPUT->notification(get_string('tincanlaunch_notavailable', 'tincanlaunch'), 'error');
-    debugging("<p>Error attempting to get registration data from State API.</p><pre>" .
-        var_dump($getregistrationdatafromlrsstate) . "</pre>", DEBUG_DEVELOPER);
+    debugging(
+        "<p>Error attempting to get registration data from State API.</p><pre>" .
+        var_dump($getregistrationdatafromlrsstate) . "</pre>", 
+        DEBUG_DEVELOPER
+    );
     die();
 }
 if ($lrsrespond == 200) {
@@ -84,9 +88,12 @@ if (is_null($registrationdata)) {
 }
 
 // Sort the registration data by last launched (most recent first).
-uasort($registrationdata, function ($a, $b) {
-    return strtotime($b['lastlaunched']) - strtotime($a['lastlaunched']);
-});
+uasort(
+    $registrationdata, 
+    function ($a, $b) { 
+        return strtotime($b['lastlaunched']) - strtotime($a['lastlaunched']);
+    }
+);
 
 // TODO: Currently this is re-PUTting all of the data - it may be better just to POST the new data.
 // This will prevent us sorting, but sorting could be done on output.
@@ -99,8 +106,10 @@ $lrsrespond = $saveresgistrationdata->httpResponse['status'];
 // Failed to connect to LRS.
 if ($lrsrespond != 204) {
     echo $OUTPUT->notification(get_string('tincanlaunch_notavailable', 'tincanlaunch'), 'error');
-    debugging("<p>Error attempting to set registration data to State API.</p><pre>" .
-        var_dump($saveresgistrationdata) . "</pre>", DEBUG_DEVELOPER);
+    myDevDebug(
+        "Error attempting to set registration data to State API.",
+        $saveresgistrationdata
+    );
     die();
 }
 
@@ -128,8 +137,10 @@ foreach ($agentprofiles as $key => $value) {
     if ($lrsrespond != 204) {
         // Failed to connect to LRS.
         echo $OUTPUT->notification(get_string('tincanlaunch_notavailable', 'tincanlaunch'), 'error');
-        debugging("<p>Error attempting to set learner preferences (" . key($agentprofile) .
-            ") to Agent Profile API.</p><pre>" . var_dump($saveagentprofile) . "</pre>", DEBUG_DEVELOPER);
+        myDevDebug(
+            "Error attempting to set learner preferences (".key($agentprofile).") to Agent Profile API.",
+            $saveagentprofile
+        );
         die();
     }
 
@@ -142,8 +153,10 @@ $lrsrespond = $savelaunchedstatement->httpResponse['status'];
 if ($lrsrespond != 204) {
     // Failed to connect to LRS.
     echo $OUTPUT->notification(get_string('tincanlaunch_notavailable', 'tincanlaunch'), 'error');
-    debugging("<p>Error attempting to send 'launched' statement.</p><pre>" .
-        var_dump($savelaunchedstatement) . "</pre>", DEBUG_DEVELOPER);
+    myDevDebug(
+        "Error attempting to send 'launched' statement.",
+        $savelaunchedstatement
+    );
     die();
 }
 
