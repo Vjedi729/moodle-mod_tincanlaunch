@@ -1,18 +1,4 @@
 <?php
-// This file is part of Moodle - http://moodle.org/
-//
-// Moodle is free software: you can redistribute it and/or modify
-// it under the terms of the GNU General Public License as published by
-// the Free Software Foundation, either version 3 of the License, or
-// (at your option) any later version.
-//
-// Moodle is distributed in the hope that it will be useful,
-// but WITHOUT ANY WARRANTY; without even the implied warranty of
-// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-// GNU General Public License for more details.
-//
-// You should have received a copy of the GNU General Public License
-// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * Library of interface functions and constants for module tincanlaunch
@@ -23,18 +9,21 @@
  * logic, should go to locallib.php. This will help to save some memory when
  * Moodle is performing actions across all modules.
  *
- * @package mod_tincanlaunch
- * @copyright  2013 Andrew Downes
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @package   mod_tincanlaunch
+ * @copyright 2013 Andrew Downes
+ * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+use TinCan\Score;
+use TinCan\Statement;
 
 defined('MOODLE_INTERNAL') || die();
 
 // TinCanPHP - required for interacting with the LRS in tincanlaunch_get_statements.
-require_once("$CFG->dirroot/mod/tincanlaunch/TinCanPHP/autoload.php");
+require_once "$CFG->dirroot/mod/tincanlaunch/TinCanPHP/autoload.php";
 
 // SCORM library from the SCORM module. Required for its xml2Array class by tincanlaunch_process_new_package.
-require_once("$CFG->dirroot/mod/scorm/datamodels/scormlib.php");
+require_once "$CFG->dirroot/mod/scorm/datamodels/scormlib.php";
 
 global $tincanlaunchsettings;
 $tincanlaunchsettings = null;
@@ -44,22 +33,27 @@ $tincanlaunchsettings = null;
 /**
  * Returns the information on whether the module supports a feature
  *
- * @see plugin_supports() in lib/moodlelib.php
  * @param string $feature FEATURE_xx constant for requested feature
+ * 
+ * @see plugin_supports() in lib/moodlelib.php
+ * 
  * @return mixed true if the feature is supported, null if unknown
  */
-function tincanlaunch_supports($feature) {
+function tincanlaunch_supports($feature)
+{
     switch($feature) {
-        case FEATURE_MOD_INTRO:
-            return true;
-        case FEATURE_COMPLETION_TRACKS_VIEWS:
-            return true;
-        case FEATURE_COMPLETION_HAS_RULES:
-            return true;
-        case FEATURE_BACKUP_MOODLE2:
-            return true;
-        default:
-            return null;
+    case FEATURE_MOD_INTRO:
+        return true;
+    case FEATURE_COMPLETION_TRACKS_VIEWS:
+        return true;
+    case FEATURE_COMPLETION_HAS_RULES:
+        return true;
+    case FEATURE_BACKUP_MOODLE2:
+        return true;
+    case FEATURE_GRADE_HAS_GRADE:
+        return true;
+    default:
+        return null;
     }
 }
 
@@ -70,11 +64,15 @@ function tincanlaunch_supports($feature) {
  * (defined by the form in mod_form.php) this function
  * will create a new instance and return the id number
  * of the new instance.
+ * 
  * @param object $tincanlaunch An object from the form in mod_form.php
+ * 
  * @global moodle_database $DB
+ * 
  * @return int The id of the newly inserted tincanlaunch record
  */
-function tincanlaunch_add_instance(stdClass $tincanlaunch) {
+function tincanlaunch_add_instance(stdClass $tincanlaunch) 
+{
     global $DB;
 
     $tincanlaunch->timecreated = time();
@@ -319,17 +317,22 @@ function tincanlaunch_get_file_info($browser, $areas, $course, $cm, $context, $f
 /**
  * Serves Tin Can content, introduction images and packages. Implements needed access control ;-)
  *
+ * 
+ * @param stdClass $course        course object
+ * @param stdClass $cm            course module object
+ * @param stdClass $context       context object
+ * @param string   $filearea      file area
+ * @param array    $args          extra arguments
+ * @param bool     $forcedownload whether or not force download
+ * @param array    $options       additional options affecting the file serving
+ * 
  * @package  mod_tincanlaunch
  * @category files
- * @param stdClass $course course object
- * @param stdClass $cm course module object
- * @param stdClass $context context object
- * @param string $filearea file area
- * @param array $args extra arguments
- * @param array $options additional options affecting the file serving
- * @return bool false if file not found, does not return if found - just send the file
+
+ * @return bool false if file not found, if found, sends file and returns no value
  */
-function tincanlaunch_pluginfile($course, $cm, $context, $filearea, $args, array $options = array()) {
+function tincanlaunch_pluginfile($course, $cm, $context, $filearea, $args, $forcedownload, array $options = array())
+{
 
     if ($context->contextlevel != CONTEXT_MODULE) {
         return false;
@@ -414,8 +417,8 @@ function tincanlaunch_get_completion_state($course, $cm, $userid, $type) {
     $expirydate = null;
     $expirydays = $tincanlaunch->tincanexpiry;
     if ($expirydays > 0) {
-        $expirydatetime = new DateTime();
-        $expirydatetime->sub(new DateInterval('P'.$expirydays.'D'));
+        $expirydatetime = new DateTime(); // Current data/time
+        $expirydatetime->sub(new DateInterval('P'.$expirydays.'D')); // Date/time before which a completion should be counted as "expired"
         $expirydate = $expirydatetime->format('c');
     }
 
@@ -686,6 +689,371 @@ function tincanlaunch_getactor($instance, $user = false) {
     return new \TinCan\Agent($agent);
 }
 
+
+
+// GRADEBOOK API functions
+function tincanlaunch_grade_settings_helper($modinstance, $tincanlaunchsettings=null)
+{
+    if ($tincanlaunchsettings == null) {
+        $tincanlaunchsettings = new stdClass();
+    }
+
+    $settingvals = [
+        'GRADE_TYPE' => [
+            "NONE" => 0,
+            "PASS_FAIL" => 1,
+            "SCORED" => 2,
+            "PERCENTAGE" => 3,
+        ],
+        'SUM_STAT' => [
+            "MAX" => 0,
+            "AVG" => 1,
+            "RECENT" => 2,
+        ]
+    ];
+
+    // Set default values in place.
+    $settingvals['gradetype'] = $settingvals['GRADE_TYPE']['PERCENTAGE'];
+    $settingvals["sumstat"] = $settingvals['SUM_STAT']['RECENT'];
+
+    if (isset($tincanlaunchsettings->tincanlaunchlrsGradeOption)) {
+        $settingvals['gradetype'] = $tincanlaunchsettings->tincanlaunchlrsGradeOption;
+    }
+    if (isset($tincanlaunchsettings->tincanlaunchGradeComboMethod)) {
+        $settingvals["sumstat"] = $tincanlaunchsettings->tincanlaunchGradeComboMethod;
+    }
+
+    return $settingvals;
+}
+
+function tincanlaunch_get_lrs_grade_data($modinstance, $userid) {
+    require_once($CFG->libdir.'/gradelib.php');
+
+    // Get tincanlaunch.
+    if (!$tincanlaunch = $DB->get_record('tincanlaunch', array('id' => $modinstance->cmidnumber))) {
+        throw new Exception("Can't find activity {$modinstance->cmidnumber}"); // TODO: localise this.
+    }
+
+    $tincanlaunchsettings = tincanlaunch_settings($modinstance->cmidnumber);
+
+    $gradesettings = tincanlaunch_grade_settings_helper($modinstance, $tincanlaunchsettings);
+
+    $expiryenabled = false;
+    $expirydate = null;
+    $expirydays = $tincanlaunch->tincanexpiry;
+    if ($expirydays > 0) {
+        $expirydatetime = new DateTime(); // Current data/time
+        $expirydatetime->sub(new DateInterval('P'.$expirydays.'D')); // Date/time before which a completion should be counted as "expired"
+        $expirydate = $expirydatetime->format('c');
+    }
+
+    $gradesource = new stdClass();
+
+    // Assign grade if user exists and grade type is not "NONE".
+    if ($gradesettings['gradetype'] != $gradesettings['GRADE_TYPE']['NONE'] && $userid != 0) {
+        $user = $DB->get_record('user', array ('id' => $userid));
+        $statementquery = tincanlaunch_get_statements(
+            $tincanlaunchsettings['tincanlaunchlrsendpoint'],
+            $tincanlaunchsettings['tincanlaunchlrslogin'],
+            $tincanlaunchsettings['tincanlaunchlrspass'],
+            $tincanlaunchsettings['tincanlaunchlrsversion'],
+            $tincanlaunch->tincanactivityid,
+            tincanlaunch_getactor($modinstance->cmidnumber, $user),
+            $tincanlaunch->tincanverbid
+        );
+
+        // If the statement exists, return true else return false.
+        if (!empty($statementquery->content) && $statementquery->success) {
+
+            // Collect all scores where the actual timestamp is within expiry.
+            $scores = array();
+            $mostrecentstatement;
+            $mostrecentstatementtimestamp = 0;
+            foreach ($statementquery->content as $statement) {
+                $statementtimestamp = $statement->getTimestamp();
+                if ($expiryenabled && $expirydate <= $statementtimestamp) {
+                    $score = $statement->getResult()->getScore();
+                    $scores[] = $score;
+
+                    if (!isset($mostrecentstatement) || $statementtimestamp > $mostrecentstatementtimestamp) {
+                        $mostrecentstatementtimestamp = $statementtimestamp;
+                        $mostrecentstatement = $statement;
+                    }
+                }
+            }
+
+            // If no scores are within expiration, end.
+            if (count($scores) != 0) {
+                $mostrecentscore = $mostrecentstatement->getResult()->getScore();
+
+                $gradesource->min = $mostrecentscore->getMin();
+                $gradesource->max = $mostrecentscore->getMax();
+
+                // Calculate score information.
+                if ($gradesettings['sum_stat'] == $gradesettings['SUM_STAT']['RECENT']) {
+                    $gradesource->raw = $mostrecentscore->getRaw();
+                } else { // Any setting which combines scores
+                    // Filter scores for only those which have the same scoring structure as the most recent score
+                    // because all scores must have the same structure to be averaged or summed.
+                    $filteredscores = array();
+                    foreach ($scores as $score) {
+                        if ($score->getMin() == $mostrecentscore->getMin() && $score->getMax() == $mostrecentscore->getMax()) {
+                            $filteredscores[] = $score;
+                        }
+                    }
+
+                    // Aggregate results (method determined by setting).
+                    if ($gradesettings['gradetype'] == $gradesettings['GRADE_TYPE']['AVG']) {
+                        $gradesource->raw = 0;
+                        foreach ($filteredscores as $score) {
+                            $gradesource->raw += $score->getRaw();
+                        }
+                        $gradesource->raw /= count($filteredscores);
+                    } else if ($gradesettings['gradetype'] == $gradesettings['GRADE_TYPE']['BEST']) {
+                        $gradesource->raw = 0;
+                        foreach ($filteredscores as $score) {
+                            if ($score->getRaw() > $gradesource->raw) {
+                                $gradesource->raw = $score->getRaw();
+                            }
+                        }
+                    }
+                }
+
+                return $gradesource;
+            }
+        }
+    }
+
+    return null;
+}
+
+function tincanlaunch_get_user_grades($modinstance, $userid = 0) {
+
+    $tincanlaunchsettings = tincanlaunch_settings($modinstance->cmidnumber);
+    $gradesettings = tincanlaunch_grade_settings_helper($modinstance, $tincanlaunchsettings);
+
+    if ($userid == 0) {
+        return null;
+    }
+
+    $gradesource = tincanlaunch_get_lrs_grade_data($modinstance, $userid);
+
+    // Actually send call to tincanlaunch_grade_item_update().
+    $grade = new stdClass();
+    $grade->userid = $userid;
+    switch($gradesettings['gradetype']) {
+        case $gradesettings['GRADE_TYPE']['SCORE']:
+            $grade->rawgrade = $gradesource->raw;
+            $grade->rawgrademin = $gradesource->min;
+            $grade->rawgrademax = $gradesource->max;
+        case $gradesettings['GRADE_TYPE']['PERCENTAGE']:
+            $grade->rawgrade = 100 * $gradesource->raw / $gradesource->max;
+            $grade->rawgrademin = 0;
+            $grade->rawgrademax = 100;
+            break;
+        default:
+            break;
+    }
+
+    return $grade;
+}
+
+function tincanlaunch_update_grades($modinstance, $userid=0, $nullifnone=true) {
+    global $CFG, $DB;
+    require_once($CFG->libdir . '/gradelib.php');
+
+    if ($quiz->grade == 0) {
+        tincanlaunch_grade_item_update($quiz);
+
+    } else if ($grades = tincanlaunch_get_user_grades($quiz, $userid)) {
+        tincanlaunch_grade_item_update($quiz, $grades);
+
+    } else if ($userid && $nullifnone) {
+        $grade = new stdClass();
+        $grade->userid = $userid;
+        $grade->rawgrade = null;
+        tincanlaunch_grade_item_update($quiz, $grade);
+
+    } else {
+        tincanlaunch_grade_item_update($quiz);
+    }
+}
+
+function tincanlaunch_grade_item_update($modinstance, $grades=null) {
+    global $CFG, $DB;
+    if (!function_exists('grade_update')) { // Workaround for buggy PHP versions.
+        require_once($CFG->libdir.'/gradelib.php');
+    }
+
+    if ($grades === 'reset') {
+        $params['reset'] = true;
+        $grades = null;
+    } else {
+        $gradesettings = tincanlaunch_grade_settings_helper($modinstance);
+
+        $params = array('itemname' => $modinstance->name, 'idnumber' => $modinstance->cmidnumber);
+
+        switch($gradesettings['gradetype']){
+            case $gradesettings['GRADE_TYPE']['NONE']:
+                $params['gradetype'] = GRADE_TYPE_NONE;
+                break;
+            case $gradesettings['GRADE_TYPE']['PERCENTAGE']:
+                $params['gradetype'] = GRADE_TYPE_VALUE;
+                $params['grademax'] = 100;
+                $params['grademin'] = 0;
+                break;
+            default:
+                break;
+        }
+    }
+
+    return grade_update('mod/tincanlaunch', $modinstance->course, 'mod', 'tincanlaunch', $modinstance->id, 0, $grades, $params);
+}
+
+// function tincanlaunch_update_grades($modinstance, $userid=0, $nullifnone=true) {
+//     global $CFG, $DB;
+//     require_once($CFG->libdir.'/gradelib.php');
+
+//     // Get tincanlaunch.
+//     if (!$tincanlaunch = $DB->get_record('tincanlaunch', array('id' => $modinstance->cmidnumber))) {
+//         throw new Exception("Can't find activity {$modinstance->cmidnumber}"); // TODO: localise this.
+//     }
+
+//     $tincanlaunchsettings = tincanlaunch_settings($modinstance->cmidnumber);
+
+//     $gradesettings = tincanlaunch_grade_settings_helper($modinstance, $tincanlaunchsettings);
+
+//     $expiryenabled = false;
+//     $expirydate = null;
+//     $expirydays = $tincanlaunch->tincanexpiry;
+//     if ($expirydays > 0) {
+//         $expirydatetime = new DateTime(); // Current data/time
+//         $expirydatetime->sub(new DateInterval('P'.$expirydays.'D')); // Date/time before which a completion should be counted as "expired"
+//         $expirydate = $expirydatetime->format('c');
+//     }
+
+//     $gradesource = new stdClass();
+
+//     // Assign grade if user exists and grade type is not "NONE".
+//     if ($gradesettings['gradetype'] != $gradesettings['GRADE_TYPE']['NONE'] && $userid != 0) {
+//         $user = $DB->get_record('user', array ('id' => $userid));
+//         $statementquery = tincanlaunch_get_statements(
+//             $tincanlaunchsettings['tincanlaunchlrsendpoint'],
+//             $tincanlaunchsettings['tincanlaunchlrslogin'],
+//             $tincanlaunchsettings['tincanlaunchlrspass'],
+//             $tincanlaunchsettings['tincanlaunchlrsversion'],
+//             $tincanlaunch->tincanactivityid,
+//             tincanlaunch_getactor($modinstance->cmidnumber, $user),
+//             $tincanlaunch->tincanverbid
+//         );
+
+//         // If the statement exists, return true else return false.
+//         if (!empty($statementquery->content) && $statementquery->success) {
+
+//             // Collect all scores where the actual timestamp is within expiry.
+//             $scores = array();
+//             $mostrecentstatement;
+//             $mostrecentstatementtimestamp = 0;
+//             foreach ($statementquery->content as $statement) {
+//                 $statementtimestamp = $statement->getTimestamp();
+//                 if ($expiryenabled && $expirydate <= $statementtimestamp) {
+//                     $score = $statement->getResult()->getScore();
+//                     $scores[] = $score;
+
+//                     if (!isset($mostrecentstatement) || $statementtimestamp > $mostrecentstatementtimestamp) {
+//                         $mostrecentstatementtimestamp = $statementtimestamp;
+//                         $mostrecentstatement = $statement;
+//                     }
+//                 }
+//             }
+
+//             // If no scores are within expiration, end.
+//             if (count($scores) != 0) {
+//                 $mostrecentscore = $mostrecentstatement->getResult()->getScore();
+
+//                 $gradesource->min = $mostrecentscore->getMin();
+//                 $gradesource->max = $mostrecentscore->getMax();
+
+//                 // Calculate score information.
+//                 if ($gradesettings['sum_stat'] == $gradesettings['SUM_STAT']['RECENT']) {
+//                     $gradesource->raw = $mostrecentscore->getRaw();
+//                 } else { // Any setting which combines scores
+//                     // Filter scores for only those which have the same scoring structure as the most recent score
+//                     // because all scores must have the same structure to be averaged or summed.
+//                     $filteredscores = array();
+//                     foreach ($scores as $score) {
+//                         if ($score->getMin() == $mostrecentscore->getMin() && $score->getMax() == $mostrecentscore->getMax()) {
+//                             $filteredscores[] = $score;
+//                         }
+//                     }
+
+//                     // Aggregate results (method determined by setting).
+//                     if ($gradesettings['gradetype'] == $gradesettings['GRADE_TYPE']['AVG']) {
+//                         $gradesource->raw = 0;
+//                         foreach ($filteredscores as $score) {
+//                             $gradesource->raw += $score->getRaw();
+//                         }
+//                         $gradesource->raw /= count($filteredscores);
+//                     } else if ($gradesettings['gradetype'] == $gradesettings['GRADE_TYPE']['BEST']) {
+//                         $gradesource->raw = 0;
+//                         foreach ($filteredscores as $score) {
+//                             if ($score->getRaw() > $gradesource->raw) {
+//                                 $gradesource->raw = $score->getRaw();
+//                             }
+//                         }
+//                     }
+//                 }
+
+//                 // Actually send call to tincanlaunch_grade_item_update().
+//                 $grade = new stdClass();
+//                 $grade->userid = $userid;
+//                 switch($gradesettings['gradetype']) {
+//                     case $gradesettings['GRADE_TYPE']['PERCENTAGE']:
+//                         $grade->rawgrade = $gradesource->raw / $gradesource->max;
+//                         break;
+//                     default:
+//                         break;
+//                 }
+
+//                 tincanlaunch_grade_item_update($modinstance, $grade);
+//             }
+//         }
+//     }
+
+//     if ($nullifnone) {
+//         $grade = new stdClass();
+//         $grade->userid   = $userid;
+//         $grade->rawgrade = null;
+//         tincanlaunch_grade_item_update($forum, $grade);
+//     }
+// }
+
+/**
+ * Helper function to reset gradebook data
+ * @package mod_tincanlaunch
+ * @param number $courseid the courseID number
+ * @param string $type this isn't used?
+ */
+function tincanlauch_reset_gradebook($courseid, $type='') {
+    global $DB;
+
+    // TODO: Get Quizzes from DB.
+    $activities = array();
+    /*
+    $DB->get_records_sql("
+            SELECT q.*, cm.idnumber as cmidnumber, q.course as courseid
+            FROM {modules} m
+            JOIN {course_modules} cm ON m.id = cm.module
+            JOIN {quiz} q ON cm.instance = q.id
+            WHERE m.name = 'quiz' AND cm.course = ?", array($courseid));
+    */
+
+    foreach ($activities as $activity) {
+        tincanlaunch_grade_item_update($activity, 'reset');
+    }
+}
+
+// End GRADEBOOK API functions
 
 /**
  * Returns the LRS settings relating to a Tin Can Launch module instance
